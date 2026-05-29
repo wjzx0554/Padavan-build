@@ -7,10 +7,6 @@ on:
   push:
     tags:
     - 'v*'
-  #  branches: 
-  #    - master
-#  schedule:
-#    - cron: 0 8 * * 5
   watch:
     types: [started]
 
@@ -22,6 +18,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@master
+
     - name: Initialization environment
       env:
         DEBIAN_FRONTEND: noninteractive
@@ -30,6 +27,7 @@ jobs:
         sudo apt-get -y install unzip libtool-bin curl cmake gperf gawk flex bison nano xxd fakeroot \
         cpio git python-docutils gettext automake autopoint texinfo build-essential help2man \
         pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget
+
     - name: Clone source code
       env:
         KERNEL: 3.4
@@ -42,28 +40,24 @@ jobs:
         cd /opt/rt-n56u/toolchain-mipsel
         sh dl_toolchain.sh
         mkdir -p /opt/images/
+
     - name: Build Firmware
-  env:
-    TNAME: RM2100
-  run: |
-    cd /opt/rt-n56u/trunk
-    cp -f configs/templates/$TNAME.config .config
+      env:
+        TNAME: RM2100
+      run: |
+        cd /opt/rt-n56u/trunk
+        cp -f configs/templates/$TNAME.config .config
+        sed -i '/CONFIG_FIRMWARE_INCLUDE_ADBYBY/d' .config
+        echo "CONFIG_FIRMWARE_INCLUDE_ADBYBY=n" >> .config
+        sed -i '/CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS/d' .config
+        echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=y" >> .config
+        sed -i '/CONFIG_FIRMWARE_INCLUDE_ALIDDNS/d' .config
+        echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=y" >> .config
+        sudo ./clear_tree
+        sudo ./build_firmware_modify $TNAME 0
+        sudo mv -f images/*.trx /opt/images/
 
-    # 关掉模板默认开着但你不需要的
-    sed -i '/CONFIG_FIRMWARE_INCLUDE_ADBYBY/d' .config
-    echo "CONFIG_FIRMWARE_INCLUDE_ADBYBY=n" >> .config
-
-    # 开启你需要的
-    sed -i '/CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS/d' .config
-    echo "CONFIG_FIRMWARE_INCLUDE_SHADOWSOCKS=y" >> .config
-
-    sed -i '/CONFIG_FIRMWARE_INCLUDE_ALIDDNS/d' .config
-    echo "CONFIG_FIRMWARE_INCLUDE_ALIDDNS=y" >> .config
-
-    sudo ./clear_tree
-    sudo ./build_firmware_modify $TNAME 0
-    sudo mv -f images/*.trx /opt/images/
-    - name : Upload packages
+    - name: Upload packages
       uses: actions/upload-artifact@master
       if: always()
       with:
